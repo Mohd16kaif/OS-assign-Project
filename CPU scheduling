@@ -5,8 +5,9 @@ int main()
 
     int numProcess, process, arrivalTime, burstTime;
 
-    cout << "<-+-+-+-+-+-+-+__WELCOME__+-+-+-+-+-+-+->" << endl;
+    cout << "                   <-+-+-+-+-+-+-+__WELCOME__+-+-+-+-+-+-+->            " << endl;
     cout << endl;
+
     cout << "Here you can find suitable CPU scheduling methods among these :- " << endl;
     cout << endl;
     cout << " 1) Round cabin scheduling " << endl;
