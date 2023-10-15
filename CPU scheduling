@@ -1,22 +1,189 @@
 #include <iostream>
+#include <vector>
+#include <algorithm>
+#include <iomanip>
+
 using namespace std;
-int main()
-{
 
-    int numProcess, process, arrivalTime, burstTime;
+struct Process {
+    int id;
+    int arrivalTime;
+    int burstTime;
+    int remainingTime;
+    int completionTime;
+    int waitingTime;
+    int turnaroundTime;
+};
 
-    cout << "                   <-+-+-+-+-+-+-+__WELCOME__+-+-+-+-+-+-+->            " << endl;
-    cout << endl;
+bool compareArrivalTime(const Process& p1, const Process& p2) {
+    return p1.arrivalTime < p2.arrivalTime;
+}
 
-    cout << "Here you can find suitable CPU scheduling methods among these :- " << endl;
-    cout << endl;
-    cout << " 1) Round cabin scheduling " << endl;
-    cout << " 2) First come first serve (FCFS) " << endl;
-    cout << " 3) Shortest job first (SJF - preemptive) " << endl;
-    cout << " 4) Shortest job first (SJF - non-preemptive ) " << endl;
+int main() {
+    int numProcesses;
+    cout << "Enter the number of processes: ";
+    cin >> numProcesses;
 
-    cout << " Enter number of processes : " << endl;
-    cin >> numProcess;
+    vector<Process> processes(numProcesses);
+
+    for (int i = 0; i < numProcesses; i++) {
+        processes[i].id = i + 1;
+        cout << "Enter arrival time for Process " << i + 1 << ": ";
+        cin >> processes[i].arrivalTime;
+        cout << "Enter burst time for Process " << i + 1 << ": ";
+        cin >> processes[i].burstTime;
+        processes[i].remainingTime = processes[i].burstTime;
+    }
+
+    // Sort processes by arrival time
+    sort(processes.begin(), processes.end(), compareArrivalTime);
+
+    int currentTime = 0;
+    vector<Process> fcfsQueue = processes;
+    vector<Process> sjfPreemptiveQueue = processes;
+    vector<Process> sjfNonPreemptiveQueue = processes;
+    vector<Process> roundRobinQueue = processes;
+
+    // FCFS Scheduling
+    for (Process& process : fcfsQueue) {
+        if (process.arrivalTime > currentTime) {
+            currentTime = process.arrivalTime;
+        }
+        process.completionTime = currentTime + process.burstTime;
+        process.turnaroundTime = process.completionTime - process.arrivalTime;
+        process.waitingTime = process.turnaroundTime - process.burstTime;
+        currentTime = process.completionTime;
+    }
+
+    // Sort processes by remaining time for SJF (Preemptive)
+    sort(sjfPreemptiveQueue.begin(), sjfPreemptiveQueue.end(), [](const Process& p1, const Process& p2) {
+        return p1.remainingTime < p2.remainingTime;
+    });
+
+    currentTime = 0;
+    for (Process& process : sjfPreemptiveQueue) {
+        if (process.arrivalTime > currentTime) {
+            currentTime = process.arrivalTime;
+        }
+        process.completionTime = currentTime + 1;
+        process.remainingTime--;
+        if (process.remainingTime == 0) {
+            process.turnaroundTime = process.completionTime - process.arrivalTime;
+            process.waitingTime = process.turnaroundTime - process.burstTime;
+        }
+        currentTime = process.completionTime;
+    }
+
+    // Sort processes by burst time for SJF (Non-Preemptive)
+    sort(sjfNonPreemptiveQueue.begin(), sjfNonPreemptiveQueue.end(), [](const Process& p1, const Process& p2) {
+        return p1.burstTime < p2.burstTime;
+    });
+
+    currentTime = 0;
+    for (Process& process : sjfNonPreemptiveQueue) {
+        if (process.arrivalTime > currentTime) {
+            currentTime = process.arrivalTime;
+        }
+        process.completionTime = currentTime + process.burstTime;
+        process.turnaroundTime = process.completionTime - process.arrivalTime;
+        process.waitingTime = process.turnaroundTime - process.burstTime;
+        currentTime = process.completionTime;
+    }
+
+    // Round Robin Scheduling
+    int timeQuantum;
+    cout << "Enter time quantum for Round Robin scheduling: ";
+    cin >> timeQuantum;
+
+    currentTime = 0;
+    while (!roundRobinQueue.empty()) {
+        Process& process = roundRobinQueue.front();
+        if (process.arrivalTime > currentTime) {
+            currentTime = process.arrivalTime;
+        }
+
+        if (process.remainingTime <= timeQuantum) {
+            process.completionTime = currentTime + process.remainingTime;
+            process.turnaroundTime = process.completionTime - process.arrivalTime;
+            process.waitingTime = process.turnaroundTime - process.burstTime;
+            currentTime = process.completionTime;
+            roundRobinQueue.erase(roundRobinQueue.begin());
+        } else {
+            process.completionTime = currentTime + timeQuantum;
+            process.remainingTime -= timeQuantum;
+            currentTime = process.completionTime;
+            roundRobinQueue.push_back(process);
+            roundRobinQueue.erase(roundRobinQueue.begin());
+        }
+    }
+
+    // Calculate and display average waiting and turnaround times
+    double avgWaitingTimeFCFS = 0.0, avgTurnaroundTimeFCFS = 0.0;
+    double avgWaitingTimeSJFPreemptive = 0.0, avgTurnaroundTimeSJFPreemptive = 0.0;
+    double avgWaitingTimeSJFNonPreemptive = 0.0, avgTurnaroundTimeSJFNonPreemptive = 0.0;
+    double avgWaitingTimeRoundRobin = 0.0, avgTurnaroundTimeRoundRobin = 0.0;
+
+    for (const Process& process : fcfsQueue) {
+        avgWaitingTimeFCFS += process.waitingTime;
+        avgTurnaroundTimeFCFS += process.turnaroundTime;
+    }
+
+    for (const Process& process : sjfPreemptiveQueue) {
+        avgWaitingTimeSJFPreemptive += process.waitingTime;
+        avgTurnaroundTimeSJFPreemptive += process.turnaroundTime;
+    }
+
+    for (const Process& process : sjfNonPreemptiveQueue) {
+        avgWaitingTimeSJFNonPreemptive += process.waitingTime;
+        avgTurnaroundTimeSJFNonPreemptive += process.turnaroundTime;
+    }
+
+    for (const Process& process : roundRobinQueue) {
+        avgWaitingTimeRoundRobin += process.waitingTime;
+        avgTurnaroundTimeRoundRobin += process.turnaroundTime;
+    }
+
+    avgWaitingTimeFCFS /= numProcesses;
+    avgTurnaroundTimeFCFS /= numProcesses;
+    avgWaitingTimeSJFPreemptive /= numProcesses;
+    avgTurnaroundTimeSJFPreemptive /= numProcesses;
+    avgWaitingTimeSJFNonPreemptive /= numProcesses;
+    avgTurnaroundTimeSJFNonPreemptive /= numProcesses;
+    avgWaitingTimeRoundRobin /= numProcesses;
+    avgTurnaroundTimeRoundRobin /= numProcesses;
+
+    // Display the results
+    cout << "FCFS Scheduling:" << endl;
+    cout << "Process\tCompletion Time\tTurnaround Time\tWaiting Time" << endl;
+    for (const Process& process : fcfsQueue) {
+        cout << "P" << process.id << "\t" << process.completionTime << "\t\t\t" << process.turnaroundTime << "\t\t\t" << process.waitingTime << endl;
+    }
+    cout << "Average Waiting Time: " << fixed << setprecision(2) << avgWaitingTimeFCFS << endl;
+    cout << "Average Turnaround Time: " << avgTurnaroundTimeFCFS << endl;
+
+    cout << "\nSJF (Preemptive) Scheduling:" << endl;
+    cout << "Process\tCompletion Time\tTurnaround Time\tWaiting Time" << endl;
+    for (const Process& process : sjfPreemptiveQueue) {
+        cout << "P" << process.id << "\t" << process.completionTime << "\t\t\t" << process.turnaroundTime << "\t\t\t" << process.waitingTime << endl;
+    }
+    cout << "Average Waiting Time: " << avgWaitingTimeSJFPreemptive << endl;
+    cout << "Average Turnaround Time: " << avgTurnaroundTimeSJFPreemptive << endl;
+
+    cout << "\nSJF (Non-Preemptive) Scheduling:" << endl;
+    cout << "Process\tCompletion Time\tTurnaround Time\tWaiting Time" << endl;
+    for (const Process& process : sjfNonPreemptiveQueue) {
+        cout << "P" << process.id << "\t" << process.completionTime << "\t\t\t" << process.turnaroundTime << "\t\t\t" << process.waitingTime << endl;
+    }
+    cout << "Average Waiting Time: " << avgWaitingTimeSJFNonPreemptive << endl;
+    cout << "Average Turnaround Time: " << avgTurnaroundTimeSJFNonPreemptive << endl;
+
+    cout << "\nRound Robin Scheduling:" << endl;
+    cout << "Process\tCompletion Time\tTurnaround Time\tWaiting Time" << endl;
+    for (const Process& process : roundRobinQueue) {
+        cout << "P" << process.id << "\t" << process.completionTime << "\t\t\t" << process.turnaroundTime << "\t\t\t" << process.waitingTime << endl;
+    }
+    cout << "Average Waiting Time: " << avgWaitingTimeRoundRobin << endl;
+    cout << "Average Turnaround Time: " << avgTurnaroundTimeRoundRobin << endl;
 
     return 0;
 }
